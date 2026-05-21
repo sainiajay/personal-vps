@@ -29,11 +29,11 @@ packer validate -var-file=variables.pkrvars.hcl .
 packer build -var-file=variables.pkrvars.hcl .
 
 # Build a single provider
-packer build -only=amazon-ebs.ubuntu      -var-file=variables.pkrvars.hcl .
-packer build -only=googlecompute.ubuntu   -var-file=variables.pkrvars.hcl .
-packer build -only=azure-arm.ubuntu       -var-file=variables.pkrvars.hcl .
-packer build -only=digitalocean.ubuntu    -var-file=variables.pkrvars.hcl .
-packer build -only=hcloud.ubuntu          -var-file=variables.pkrvars.hcl .
+packer build -only=ubuntu-base.amazon-ebs.ubuntu      -var-file=variables.pkrvars.hcl .
+packer build -only=ubuntu-base.googlecompute.ubuntu   -var-file=variables.pkrvars.hcl .
+packer build -only=ubuntu-base.azure-arm.ubuntu       -var-file=variables.pkrvars.hcl .
+packer build -only=ubuntu-base.digitalocean.ubuntu    -var-file=variables.pkrvars.hcl .
+packer build -only=ubuntu-base.hcloud.ubuntu          -var-file=variables.pkrvars.hcl .
 ```
 
 ## Setup
