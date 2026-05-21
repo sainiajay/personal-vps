@@ -58,6 +58,12 @@ variable "azure_location" {
   default     = "East US"
 }
 
+variable "azure_vm_size" {
+  description = "Azure VM size used during the build"
+  type        = string
+  default     = "Standard_B1s"
+}
+
 # ── DigitalOcean ───────────────────────────────────────────────────────────────
 
 variable "do_api_token" {
@@ -73,6 +79,12 @@ variable "do_region" {
   default     = "nyc3"
 }
 
+variable "do_size" {
+  description = "DigitalOcean droplet size used during the build"
+  type        = string
+  default     = "s-1vcpu-1gb"
+}
+
 # ── Hetzner ────────────────────────────────────────────────────────────────────
 
 variable "hcloud_token" {
@@ -86,4 +98,10 @@ variable "hcloud_location" {
   description = "Hetzner Cloud location to build the snapshot in"
   type        = string
   default     = "hel1"
+}
+
+variable "hcloud_server_type" {
+  description = "Hetzner Cloud server type used during the build"
+  type        = string
+  default     = "cx23"
 }
