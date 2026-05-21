@@ -159,23 +159,6 @@ jobs:
       - name: packer init
         run: packer init .
 
-      - name: Debug Hetzner available server types
-        if: matrix.provider == 'hetzner'
-        env:
-          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-        run: |
-          echo "=== Available (non-deprecated) server types ==="
-          curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
-            "https://api.hetzner.cloud/v1/server_types?page=1&per_page=50" | \
-            python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          for s in sorted(data.get('server_types', []), key=lambda x: x['name']):
-              if not s.get('deprecated', False):
-                  locs = [p['location'] for p in s.get('prices', [])]
-                  print(f\"{s['name']}: {s['description']} | cores={s['cores']} ram={s['memory']}GB | locs={locs}\")
-          "
-
       - name: packer build
         env:
           PACKER_LOG: "1"

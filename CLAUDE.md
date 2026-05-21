@@ -14,7 +14,7 @@ HashiCorp Packer project that builds Ubuntu 24.04 LTS VM images for five cloud p
 | GCP | `googlecompute` | `ubuntu` | GCE custom image |
 | Azure | `azure-arm` | `azureuser` | Managed image |
 | DigitalOcean | `digitalocean` | `root` | Droplet snapshot |
-| Hetzner | `hcloud` | `root` | Server snapshot |
+| Hetzner | `hcloud` | `root` | Server snapshot (server type: `cx23`, location: `fsn1`) |
 
 ## Commands
 
