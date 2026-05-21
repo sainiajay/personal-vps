@@ -1,0 +1,33 @@
+name: Validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-packer@main
+        with:
+          version: latest
+
+      - name: packer init
+        run: packer init .
+
+      - name: packer validate
+        # Credentials are not required for syntax validation.
+        # GCP project ID, Azure subscription ID, and API tokens are passed as
+        # placeholder values so all required variables are satisfied.
+        run: |
+          packer validate \
+            -var="gcp_project_id=placeholder" \
+            -var="azure_subscription_id=placeholder" \
+            -var="do_api_token=placeholder" \
+            -var="hcloud_token=placeholder" \
+            .
