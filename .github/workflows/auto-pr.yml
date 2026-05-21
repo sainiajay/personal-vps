@@ -1,0 +1,45 @@
+name: Auto PR
+
+# Opens a pull request to main whenever a non-main branch is pushed.
+# If a PR for the branch already exists the step exits cleanly.
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          TITLE="${BRANCH//\//-}"   # replace slashes for a readable title
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "$TITLE" \
+            --body "$(cat <<'EOF'
+          ## Summary
+
+          Automated PR from branch \`${{ github.ref_name }}\`.
+
+          <!-- Describe your changes here -->
+
+          ## Checklist
+          - [ ] `packer validate` passes locally
+          - [ ] Scripts tested on at least one provider
+          EOF
+          )" \
+          || echo "PR already exists for branch $BRANCH — skipping"

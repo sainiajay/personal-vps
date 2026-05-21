@@ -1,0 +1,190 @@
+name: Build
+
+# Triggered manually. Check the boxes for the providers you want to build.
+# The preflight job validates that every required secret is present for each
+# selected provider before any build runner starts.
+#
+# Required GitHub secrets (Settings → Secrets and variables → Actions):
+#   AWS_ACCESS_KEY_ID          IAM user with EC2 AMI builder permissions
+#   AWS_SECRET_ACCESS_KEY
+#   GCP_SERVICE_ACCOUNT_KEY    Service-account JSON key (Compute Image User role)
+#   GCP_PROJECT_ID
+#   AZURE_CLIENT_ID            Service principal with Contributor on the resource group
+#   AZURE_CLIENT_SECRET
+#   AZURE_SUBSCRIPTION_ID
+#   AZURE_TENANT_ID
+#   DO_API_TOKEN               DigitalOcean personal access token
+#   HCLOUD_TOKEN               Hetzner Cloud API token
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: Base name for the generated images
+        type: string
+        default: ubuntu-base
+      aws:
+        description: Build AWS AMI
+        type: boolean
+        default: false
+      gcp:
+        description: Build GCP image
+        type: boolean
+        default: false
+      azure:
+        description: Build Azure managed image
+        type: boolean
+        default: false
+      digitalocean:
+        description: Build DigitalOcean snapshot
+        type: boolean
+        default: false
+      hetzner:
+        description: Build Hetzner snapshot
+        type: boolean
+        default: false
+
+jobs:
+  # ── Preflight ────────────────────────────────────────────────────────────────
+  # Validates that every selected provider has its required secrets configured,
+  # then outputs the matrix of providers to build. Fails fast with actionable
+  # error messages before any expensive build runner is provisioned.
+  preflight:
+    name: Verify credentials
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+
+    steps:
+      - name: Check secrets and build provider matrix
+        id: build-matrix
+        env:
+          AWS_ACCESS_KEY_ID:       ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY:   ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          GCP_PROJECT_ID:          ${{ secrets.GCP_PROJECT_ID }}
+          AZURE_CLIENT_ID:         ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET:     ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SUBSCRIPTION_ID:   ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID:         ${{ secrets.AZURE_TENANT_ID }}
+          DO_API_TOKEN:            ${{ secrets.DO_API_TOKEN }}
+          HCLOUD_TOKEN:            ${{ secrets.HCLOUD_TOKEN }}
+        run: |
+          set -euo pipefail
+          errors=()
+          includes=()
+
+          if [[ "${{ inputs.aws }}"          != "true" &&
+                "${{ inputs.gcp }}"          != "true" &&
+                "${{ inputs.azure }}"        != "true" &&
+                "${{ inputs.digitalocean }}" != "true" &&
+                "${{ inputs.hetzner }}"      != "true" ]]; then
+            echo "::error::No providers selected — enable at least one before running."
+            exit 1
+          fi
+
+          # Appends to errors[] if any listed variable is empty.
+          check() {
+            local label="$1"; shift
+            local missing=()
+            for var in "$@"; do
+              [[ -z "${!var}" ]] && missing+=("$var")
+            done
+            if (( ${#missing[@]} )); then
+              errors+=("${label}: missing secrets: ${missing[*]}")
+              return 1
+            fi
+          }
+
+          if [[ "${{ inputs.aws }}" == "true" ]]; then
+            if check "AWS" AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; then
+              includes+=('{"provider":"aws","only":"amazon-ebs.ubuntu"}')
+            fi
+          fi
+
+          if [[ "${{ inputs.gcp }}" == "true" ]]; then
+            if check "GCP" GCP_SERVICE_ACCOUNT_KEY GCP_PROJECT_ID; then
+              includes+=('{"provider":"gcp","only":"googlecompute.ubuntu"}')
+            fi
+          fi
+
+          if [[ "${{ inputs.azure }}" == "true" ]]; then
+            if check "Azure" AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID; then
+              includes+=('{"provider":"azure","only":"azure-arm.ubuntu"}')
+            fi
+          fi
+
+          if [[ "${{ inputs.digitalocean }}" == "true" ]]; then
+            if check "DigitalOcean" DO_API_TOKEN; then
+              includes+=('{"provider":"digitalocean","only":"digitalocean.ubuntu"}')
+            fi
+          fi
+
+          if [[ "${{ inputs.hetzner }}" == "true" ]]; then
+            if check "Hetzner" HCLOUD_TOKEN; then
+              includes+=('{"provider":"hetzner","only":"hcloud.ubuntu"}')
+            fi
+          fi
+
+          if (( ${#errors[@]} )); then
+            for err in "${errors[@]}"; do
+              echo "::error::${err}"
+            done
+            exit 1
+          fi
+
+          joined=$(IFS=,; printf '%s' "${includes[*]}")
+          echo "matrix={\"include\":[${joined}]}" >> "$GITHUB_OUTPUT"
+
+  # ── Build ────────────────────────────────────────────────────────────────────
+  # One job per selected provider, run in parallel. Credentials for unselected
+  # providers are passed as empty strings and are ignored by Packer since each
+  # job builds with -only=<its provider>.
+  build:
+    name: Build ${{ matrix.provider }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.preflight.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-packer@v3
+        with:
+          version: latest
+
+      - name: packer init
+        run: packer init .
+
+      - name: packer build
+        env:
+          PACKER_LOG: "1"
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION:    us-east-1
+          GOOGLE_CREDENTIALS:    ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          ARM_CLIENT_ID:         ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET:     ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID:   ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID:         ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          packer build \
+            -only="${{ matrix.only }}" \
+            -color=false \
+            -var="image_name=${{ inputs.image_name }}" \
+            -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            -var="do_api_token=${{ secrets.DO_API_TOKEN }}" \
+            -var="hcloud_token=${{ secrets.HCLOUD_TOKEN }}" \
+            .
+
+      - name: Upload manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-${{ matrix.provider }}
+          path: manifest.json
+          if-no-files-found: ignore

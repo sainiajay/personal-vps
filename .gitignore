@@ -1,0 +1,11 @@
+# Packer variable files — may contain API tokens and secrets
+*.pkrvars.hcl
+!*.pkrvars.hcl.example
+
+# Packer plugin cache and build artifacts
+.packer_cache/
+packer_cache/
+manifest.json
+
+# macOS
+.DS_Store
