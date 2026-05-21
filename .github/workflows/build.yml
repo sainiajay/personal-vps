@@ -152,7 +152,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-packer@main
+      - uses: hashicorp/setup-packer@v3
         with:
           version: latest
 
