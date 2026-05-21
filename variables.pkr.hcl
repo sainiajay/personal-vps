@@ -85,5 +85,5 @@ variable "hcloud_token" {
 variable "hcloud_location" {
   description = "Hetzner Cloud location to build the snapshot in"
   type        = string
-  default     = "fsn1"
+  default     = "hel1"
 }
