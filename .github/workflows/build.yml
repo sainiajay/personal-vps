@@ -98,31 +98,31 @@ jobs:
 
           if [[ "${{ inputs.aws }}" == "true" ]]; then
             if check "AWS" AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; then
-              includes+=('{"provider":"aws","only":"amazon-ebs.ubuntu"}')
+              includes+=('{"provider":"aws","only":"ubuntu-base.amazon-ebs.ubuntu"}')
             fi
           fi
 
           if [[ "${{ inputs.gcp }}" == "true" ]]; then
             if check "GCP" GCP_SERVICE_ACCOUNT_KEY GCP_PROJECT_ID; then
-              includes+=('{"provider":"gcp","only":"googlecompute.ubuntu"}')
+              includes+=('{"provider":"gcp","only":"ubuntu-base.googlecompute.ubuntu"}')
             fi
           fi
 
           if [[ "${{ inputs.azure }}" == "true" ]]; then
             if check "Azure" AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID; then
-              includes+=('{"provider":"azure","only":"azure-arm.ubuntu"}')
+              includes+=('{"provider":"azure","only":"ubuntu-base.azure-arm.ubuntu"}')
             fi
           fi
 
           if [[ "${{ inputs.digitalocean }}" == "true" ]]; then
             if check "DigitalOcean" DO_API_TOKEN; then
-              includes+=('{"provider":"digitalocean","only":"digitalocean.ubuntu"}')
+              includes+=('{"provider":"digitalocean","only":"ubuntu-base.digitalocean.ubuntu"}')
             fi
           fi
 
           if [[ "${{ inputs.hetzner }}" == "true" ]]; then
             if check "Hetzner" HCLOUD_TOKEN; then
-              includes+=('{"provider":"hetzner","only":"hcloud.ubuntu"}')
+              includes+=('{"provider":"hetzner","only":"ubuntu-base.hcloud.ubuntu"}')
             fi
           fi
 
