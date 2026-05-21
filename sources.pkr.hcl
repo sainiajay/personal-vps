@@ -75,7 +75,7 @@ source "digitalocean" "ubuntu" {
 source "hcloud" "ubuntu" {
   token         = var.hcloud_token
   image         = "ubuntu-24.04"
-  datacenter    = var.hcloud_datacenter
+  location      = var.hcloud_location
   server_type   = "cpx11"
   snapshot_name = "${var.image_name}-ubuntu2404-{{timestamp}}"
   ssh_username  = "root"
